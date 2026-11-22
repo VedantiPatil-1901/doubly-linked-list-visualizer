@@ -28,41 +28,54 @@ public class DllController {
         return ResponseEntity.ok(dll.size());
     }
 
+    @GetMapping("/state")
+    public ResponseEntity<List<NodeStateDto>> getCurrentState() {
+        return ResponseEntity.ok(dll.getSnapshotNodes(null));
+    }
+
     @PostMapping("/insert-head")
-    public ResponseEntity<String> insertHead(@RequestParam int data) {
-        dll.insertAtHead(data);
-        return ResponseEntity.ok("Inserted " + data + " at Head successfully!");
+    public ResponseEntity<DllResponseDto> insertHead(@RequestParam int data) {
+        List<OperationStepDto> steps = dll.insertAtHead(data);
+        String msg = "Inserted " + data + " at Head successfully!";
+        return ResponseEntity.ok(new DllResponseDto(true, msg, dll.size(), dll.getSnapshotNodes(null), steps));
     }
 
     @PostMapping("/insert-tail")
-    public ResponseEntity<String> insertTail(@RequestParam int data) {
-        dll.insertAtTail(data);
-        return ResponseEntity.ok("Inserted " + data + " at Tail successfully!");
+    public ResponseEntity<DllResponseDto> insertTail(@RequestParam int data) {
+        List<OperationStepDto> steps = dll.insertAtTail(data);
+        String msg = "Inserted " + data + " at Tail successfully!";
+        return ResponseEntity.ok(new DllResponseDto(true, msg, dll.size(), dll.getSnapshotNodes(null), steps));
     }
 
     @PostMapping("/insert-position")
-    public ResponseEntity<String> insertPosition(@RequestParam int data, @RequestParam int position) {
-        boolean inserted = dll.insertAtPosition(data, position);
-        if (!inserted) {
+    public ResponseEntity<DllResponseDto> insertPosition(@RequestParam int data, @RequestParam int position) {
+        List<OperationStepDto> steps = dll.insertAtPosition(data, position);
+        if (steps == null) {
+            String errMsg = "Invalid position: " + position + ". Valid range is 1 to " + (dll.size() + 1);
             return ResponseEntity.badRequest()
-                    .body("Invalid position: " + position + ". Valid range is 1 to " + (dll.size() + 1));
+                    .body(new DllResponseDto(false, errMsg, dll.size(), dll.getSnapshotNodes(null), List.of()));
         }
-        return ResponseEntity.ok("Inserted " + data + " at position " + position + " successfully!");
+        String msg = "Inserted " + data + " at position " + position + " successfully!";
+        return ResponseEntity.ok(new DllResponseDto(true, msg, dll.size(), dll.getSnapshotNodes(null), steps));
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<String> deleteNode(@RequestParam int data) {
-        boolean deleted = dll.deleteNode(data);
-        if (!deleted) {
+    public ResponseEntity<DllResponseDto> deleteNode(@RequestParam int data) {
+        List<OperationStepDto> steps = dll.deleteNode(data);
+        if (steps == null) {
+            String errMsg = "Node with value " + data + " not found!";
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Node with value " + data + " not found!");
+                    .body(new DllResponseDto(false, errMsg, dll.size(), dll.getSnapshotNodes(null), List.of()));
         }
-        return ResponseEntity.ok("Deleted node with value: " + data);
+        String msg = "Deleted node with value: " + data;
+        return ResponseEntity.ok(new DllResponseDto(true, msg, dll.size(), dll.getSnapshotNodes(null), steps));
     }
 
     @DeleteMapping("/clear")
-    public ResponseEntity<String> clearList() {
-        dll.clear();
-        return ResponseEntity.ok("Doubly Linked List cleared successfully!");
+    public ResponseEntity<DllResponseDto> clearList() {
+        List<OperationStepDto> steps = dll.clear();
+        return ResponseEntity.ok(
+                new DllResponseDto(true, "Doubly Linked List cleared successfully!", dll.size(), dll.getSnapshotNodes(null), steps)
+        );
     }
 }

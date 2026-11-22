@@ -1,14 +1,20 @@
 package com.example.dllvisualizer;
 
 public class Node {
+    private final int id;
     private int data;
     private Node next;
     private Node prev;
 
-    public Node(int data) {
+    public Node(int id, int data) {
+        this.id = id;
         this.data = data;
         this.next = null;
         this.prev = null;
+    }
+
+    public int getId() {
+        return id;
     }
 
     public int getData() {
