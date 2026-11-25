@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doubly Linked List &amp; AVAIL Visualizer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Top Navigation & Live List Metadata -->
+  <header class="navbar">
+    <div class="brand">
+      <h1>Doubly Linked List Visualizer</h1>
+      <span class="subtitle">Main DLL &amp; AVAIL Pool Step Debugger</span>
+    </div>
+    <div class="list-status-bar" aria-label="List Metadata">
+      <span class="status-pill">Size: <strong id="list-size">0</strong></span>
+      <span class="status-pill">HEAD: <strong id="head-id">NULL</strong></span>
+      <span class="status-pill">TAIL: <strong id="tail-id">NULL</strong></span>
+      <span class="status-pill">AVAIL: <strong id="avail-head-id">A1</strong></span>
+    </div>
+  </header>
+
+  <!-- Operations & Step Playback Controls -->
+  <section class="controls-panel" aria-label="Operations and Playback Controls">
+    <div class="control-group">
+      <label for="node-data-input" class="sr-only">Node Value</label>
+      <input type="number" id="node-data-input" placeholder="Value (e.g. 115)" />
+
+      <label for="node-position-input" class="sr-only">Position</label>
+      <input type="number" id="node-position-input" min="1" placeholder="Pos (1-based)" />
+
+      <button type="button" id="btn-insert-head" class="btn btn-primary">Insert Head</button>
+      <button type="button" id="btn-insert-tail" class="btn btn-primary">Insert Tail</button>
+      <button type="button" id="btn-insert-pos" class="btn btn-secondary">Insert at Pos</button>
+    </div>
+
+    <div class="control-group">
+      <label for="delete-data-input" class="sr-only">Delete Value</label>
+      <input type="number" id="delete-data-input" placeholder="Delete value" />
+      <button type="button" id="btn-delete" class="btn btn-danger">Delete</button>
+      <button type="button" id="btn-clear" class="btn btn-outline">Clear</button>
+    </div>
+
+    <div class="control-group">
+      <button type="button" id="btn-traverse-forward" class="btn btn-accent">Traverse Forward</button>
+      <button type="button" id="btn-traverse-backward" class="btn btn-accent">Traverse Backward</button>
+    </div>
+
+    <!-- Step-by-Step Playback Controls -->
+    <div class="control-group playback-group" aria-label="Step Playback Controls">
+      <button type="button" id="btn-prev-step" class="btn btn-ghost">Prev</button>
+      <button type="button" id="btn-play-pause" class="btn btn-success">Play</button>
+      <button type="button" id="btn-next-step" class="btn btn-ghost">Next</button>
+
+      <label for="speed-select" class="speed-label">Speed:</label>
+      <select id="speed-select" class="speed-select">
+        <option value="2200" selected>Very Slow (2.2s)</option>
+        <option value="1400">Slow (1.4s)</option>
+        <option value="800">Normal (0.8s)</option>
+      </select>
+
+      <span id="step-counter" class="step-counter">Step 0 / 0</span>
+    </div>
+  </section>
+
+  <!-- Current Step Description Banner -->
+  <section class="feedback-bar" aria-live="polite">
+    <span id="step-badge" class="step-badge">READY</span>
+    <p id="step-description">Select an operation or enter a value to begin step-by-step visualization.</p>
+  </section>
+
+  <!-- Main Workspace: Two-Tier Canvas (Left) + Algorithm Box (Right) -->
+  <main class="workspace">
+    <!-- Left / Center: Two-Tier Visual Area -->
+    <section class="visualizer-column" aria-label="Linked List Visualization">
+      <!-- Top Tier: Main Doubly Linked List -->
+      <div class="tier-box main-dll-tier">
+        <div class="tier-header">
+          <h2>Main Doubly Linked List</h2>
+          <div class="pointer-legend">
+            <span class="badge badge-head">HEAD</span>
+            <span class="badge badge-tail">TAIL</span>
+            <span class="badge badge-curr">CURR</span>
+          </div>
+        </div>
+
+        <div class="canvas-wrapper">
+          <div class="canvas" id="dll-canvas">
+            <div class="null-pointer-group" id="head-null-group">
+              <span class="pointer-tag badge-head">HEAD</span>
+              <div class="null-terminal" id="head-null">NULL</div>
+            </div>
+
+            <!-- Sample Node (script.js will dynamically render nodes and linking arrows) -->
+            <div class="node-unit" data-node-id="1">
+              <div class="pointer-badges">
+                <span class="badge badge-head">HEAD</span>
+                <span class="badge badge-tail">TAIL</span>
+              </div>
+              <div class="node-box">
+                <div class="node-cell node-prev">
+                  <span class="cell-label">PREV / BACK</span>
+                  <span class="cell-value">NULL</span>
+                </div>
+                <div class="node-cell node-data">
+                  <span class="cell-label">INFO (#1)</span>
+                  <span class="cell-value">45</span>
+                </div>
+                <div class="node-cell node-next">
+                  <span class="cell-label">NEXT / FORW</span>
+                  <span class="cell-value">NULL</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="connector-slot" aria-hidden="true">⇄</div>
+
+            <div class="null-pointer-group" id="tail-null-group">
+              <span class="pointer-tag badge-tail">TAIL</span>
+              <div class="null-terminal" id="tail-null">NULL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Floating / Transit Layer for Moving Nodes Between AVAIL and Main DLL -->
+      <div id="transit-layer" class="transit-layer" aria-hidden="true"></div>
+
+      <!-- Bottom Tier: AVAIL Free Node Pool -->
+      <div class="tier-box avail-tier">
+        <div class="tier-header">
+          <h2>AVAIL Pool (Free Nodes)</h2>
+          <span class="avail-pointer-pill">AVAIL &rarr; <strong id="avail-pointer-label">A1</strong></span>
+        </div>
+
+        <div class="canvas-wrapper avail-wrapper">
+          <div class="avail-strip" id="avail-canvas">
+            <!-- Sample Free Nodes (script.js will render pool & FORW links) -->
+            <div class="avail-node-unit is-avail-head" data-avail-id="A1">
+              <span class="pointer-tag badge-avail">AVAIL</span>
+              <div class="avail-node-box">
+                <div class="avail-cell avail-info">
+                  <span class="cell-label">INFO</span>
+                  <span class="cell-value">—</span>
+                </div>
+                <div class="avail-cell avail-forw">
+                  <span class="cell-label">FORW</span>
+                  <span class="cell-value">A2</span>
+                </div>
+              </div>
+            </div>
+
+            <span class="avail-arrow" aria-hidden="true">&rarr;</span>
+
+            <div class="avail-node-unit" data-avail-id="A2">
+              <div class="pointer-badges"></div>
+              <div class="avail-node-box">
+                <div class="avail-cell avail-info">
+                  <span class="cell-label">INFO</span>
+                  <span class="cell-value">—</span>
+                </div>
+                <div class="avail-cell avail-forw">
+                  <span class="cell-label">FORW</span>
+                  <span class="cell-value">A3</span>
+                </div>
+              </div>
+            </div>
+
+            <span class="avail-arrow" aria-hidden="true">&rarr;</span>
+
+            <div class="avail-node-unit" data-avail-id="A3">
+              <div class="pointer-badges"></div>
+              <div class="avail-node-box">
+                <div class="avail-cell avail-info">
+                  <span class="cell-label">INFO</span>
+                  <span class="cell-value">—</span>
+                </div>
+                <div class="avail-cell avail-forw">
+                  <span class="cell-label">FORW</span>
+                  <span class="cell-value">A4</span>
+                </div>
+              </div>
+            </div>
+
+            <span class="avail-arrow" aria-hidden="true">&rarr;</span>
+
+            <div class="avail-node-unit" data-avail-id="A4">
+              <div class="pointer-badges"></div>
+              <div class="avail-node-box">
+                <div class="avail-cell avail-info">
+                  <span class="cell-label">INFO</span>
+                  <span class="cell-value">—</span>
+                </div>
+                <div class="avail-cell avail-forw">
+                  <span class="cell-label">FORW</span>
+                  <span class="cell-value">NULL</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Side: Algorithm Box with Step Highlighting -->
+    <aside class="algorithm-panel" aria-label="Algorithm Steps">
+      <div class="algo-header">
+        <h2 id="algo-title">Algorithm (INSTWL / DELTWL)</h2>
+        <span id="algo-tag" class="algo-tag">IDLE</span>
+      </div>
+
+      <p id="algo-subtitle" class="algo-subtitle">
+        Click an operation to load its steps and highlight the active line during execution.
+      </p>
+
+      <ol id="algo-steps-list" class="algo-steps-list">
+        <li class="algo-step" data-step-index="0">
+          <span class="algo-step-num">1</span>
+          <span class="algo-step-text">[OVERFLOW check / Locate position] Verify AVAIL availability or target node LOC.</span>
+        </li>
+        <li class="algo-step" data-step-index="1">
+          <span class="algo-step-num">2</span>
+          <span class="algo-step-text">Pop node from AVAIL: NEW := AVAIL; AVAIL := FORW[AVAIL]; INFO[NEW] := ITEM.</span>
+        </li>
+        <li class="algo-step" data-step-index="2">
+          <span class="algo-step-num">3</span>
+          <span class="algo-step-text">Link FORW / BACK arrows into Main DLL and update HEAD / TAIL / CURR.</span>
+        </li>
+        <li class="algo-step" data-step-index="3">
+          <span class="algo-step-num">4</span>
+          <span class="algo-step-text">On delete: unlink LOC, then return to AVAIL via FORW[LOC] := AVAIL; AVAIL := LOC.</span>
+        </li>
+      </ol>
+    </aside>
+  </main>
+
+  <!-- Traversal Output Strip -->
+  <footer class="traversal-footer">
+    <strong>Traversal Output:</strong>
+    <span id="traversal-output">[ ]</span>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

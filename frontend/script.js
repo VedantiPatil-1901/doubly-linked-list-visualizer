@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:8080/api/dll";
+const API_BASE = "/api/dll";
 const AVAIL_POOL_SIZE = 60;
 const SLOW_PACE_MULTIPLIER = 1.8;
 
